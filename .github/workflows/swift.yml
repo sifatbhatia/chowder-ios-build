@@ -15,7 +15,7 @@ jobs:
 
       - name: Build App
         run: |
-          xcodebuild -project chawder/Chowder.xcodeproj \
+          xcodebuild -project Chowder/Chowder.xcodeproj \
                      -scheme Chowder \
                      -sdk iphonesimulator \
                      -destination 'platform=iOS Simulator,name=iPhone 15' \
