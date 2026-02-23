@@ -11,16 +11,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build App
-        # CODE_SIGNING_ALLOWED=NO bypasses the need for Apple certs on the runner
-        run: |
-          xcodebuild build -project Chowder/Chowder.xcodeproj \
-                     -scheme Chowder \
-                     -configuration Release \
-                     -sdk iphoneos \
-                     -derivedDataPath build \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO
+      - name: Build App for IPA
+      run: |
+        xcodebuild build -project Chowder/Chowder.xcodeproj \
+                   -scheme Chowder \
+                   -configuration Release \
+                   -destination "generic/platform=iOS" \
+                   -derivedDataPath build \
+                   CODE_SIGNING_ALLOWED=NO \
+                   CODE_SIGNING_REQUIRED=NO \
+                   CODE_SIGN_IDENTITY="" \
+                   CODE_SIGN_ENTITLEMENTS=""
 
       - name: Package IPA
         run: |
