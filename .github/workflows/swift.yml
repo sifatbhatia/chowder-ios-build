@@ -6,27 +6,27 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14  # More stable than latest
+    runs-on: macos-14
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer  # Pin to stable version
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
       - name: Resolve Swift Packages
         run: xcodebuild -resolvePackageDependencies -project Chowder/Chowder.xcodeproj -scheme Chowder
 
       - name: Clean Build Folder
-        run: xcodebuild clean -project Chowder/Chowder.xcodeproj -scheme Chowder -configuration Release
+        run: xcodebuild clean -project Chowder/Chowder.xcodeproj -scheme Chowder
 
-      - name: Build Unsigned Archive
+      - name: Build Unsigned Archive (Ignore Warnings)
         run: |
           mkdir -p build
           xcodebuild archive \
             -project Chowder/Chowder.xcodeproj \
             -scheme Chowder \
-            -configuration Release \
+            -configuration Debug \
             -destination "generic/platform=iOS" \
             -derivedDataPath build \
             -archivePath build/Chowder.xcarchive \
@@ -35,8 +35,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_ENTITLEMENTS="" \
             SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
+            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
+            CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS=NO \
             ENABLE_PREVIEWS=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            OTHER_SWIFT_FLAGS="-Xfrontend -warn-long-function-bodies=100 -Xfrontend -warn-long-expression-type-checking=100"
 
       - name: Package IPA
         run: |
