@@ -1,4 +1,4 @@
-name: Fix & Build Unsigned IPA
+name: Fix Bundle ID & Build IPA
 
 on:
   push:
@@ -11,42 +11,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Auto-Fix Swift Syntax Errors
-        run: |
-          # Remove trailing commas from ChowderActivityAttributes.swift (lines 61,73,86,99,112,125)
-          sed -i.bak 's/),\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
-          sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
-          echo "Fixed trailing commas:"
-          grep -n "," Chowder/Chowder/Models/ChowderActivityAttributes.swift | head -10
+      - name: Fix Swift Syntax
+        run: sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
-      - name: Build App (Fixed)
+      - name: Build App
         run: |
           mkdir -p build
-          xcodebuild build \
-            -project Chowder/Chowder.xcodeproj \
-            -scheme Chowder \
-            -configuration Debug \
-            -destination "generic/platform=iOS" \
-            -derivedDataPath build \
-            IPHONEOS_DEPLOYMENT_TARGET=17.0 \
-            CODE_SIGNING_ALLOWED=NO \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO || true
+          xcodebuild build -project Chowder/Chowder.xcodeproj -scheme Chowder \
+            -configuration Debug -destination "generic/platform=iOS" \
+            -derivedDataPath build IPHONEOS_DEPLOYMENT_TARGET=17.0 \
+            CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=NO || true
 
-      - name: Package IPA
+      - name: Fix Bundle ID & Package
         run: |
           APP=$(find build -name "*.app" | head -1)
           if [ -n "$APP" ]; then
-            mkdir -p Payload && cp -r "$APP" Payload/ && zip -r Chowder.ipa Payload
+            echo "Fixing $APP bundle ID..."
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.sifatbhatia.chowder" "$APP/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Chowder" "$APP/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0" "$APP/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" "$APP/Info.plist"
+            
+            mkdir -p Payload && cp -r "$APP" Payload/
+            zip -r Chowder.ipa Payload
+            echo "IPA created with bundle ID: com.sifatbhatia.chowder"
           else
-            echo "No app - listing:" && find build -name "*.app" || true
             exit 1
           fi
 
-      - name: Upload
+      - name: Upload Fixed IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Chowder-IPA
+          name: Chowder-Fixed-IPA
           path: Chowder.ipa
