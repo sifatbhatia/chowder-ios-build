@@ -1,4 +1,4 @@
-name: iOS Build
+name: Build Unsigned IPA
 
 on:
   push:
@@ -6,17 +6,31 @@ on:
 
 jobs:
   build:
-    # This provides the Mac environment you need
     runs-on: macos-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build App
+        # CODE_SIGNING_ALLOWED=NO bypasses the need for Apple certs on the runner
         run: |
-          xcodebuild -project Chowder/Chowder.xcodeproj \
+          xcodebuild build -project Chowder/Chowder.xcodeproj \
                      -scheme Chowder \
-                     -sdk iphonesimulator \
-                     -destination 'platform=iOS Simulator,name=iPhone 15' \
-                     clean build
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath build \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          # Moves the compiled .app into a Payload folder for zipping
+          cp -r build/Build/Products/Release-iphoneos/*.app Payload/
+          zip -r Chowder.ipa Payload
+
+      - name: Upload to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chowder-Package
+          path: Chowder.ipa
