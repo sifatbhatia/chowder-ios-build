@@ -57,7 +57,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: nil,
             intentStartDate: startDate,
             stepNumber: 1,
-            costTotal: nil,
+            costTotal: nil
         )
     }
 
@@ -69,7 +69,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: nil,
             intentStartDate: startDate,
             stepNumber: 2,
-            costTotal: "$0.12",
+            costTotal: "$0.12"
         )
     }
 
@@ -82,7 +82,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: "Searched trains from London to Margate on Feb 28",
             intentStartDate: startDate,
             stepNumber: 3,
-            costTotal: "$0.34",
+            costTotal: "$0.34"
         )
     }
 
@@ -95,7 +95,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: "Compared departure times and prices",
             intentStartDate: startDate,
             stepNumber: 4,
-            costTotal: "$0.56",
+            costTotal: "$0.56"
         )
     }
 
@@ -108,7 +108,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: "Picked the 10:15 departure—best price!",
             intentStartDate: startDate,
             stepNumber: 5,
-            costTotal: "$0.78",
+            costTotal: "$0.78"
         )
     }
     
@@ -121,7 +121,7 @@ extension ChowderActivityAttributes.ContentState {
             secondPreviousIntent: "Entered passenger details",
             intentStartDate: startDate,
             stepNumber: 6,
-            costTotal: "$1.20",
+            costTotal: "$1.20"
         )
     }
     
