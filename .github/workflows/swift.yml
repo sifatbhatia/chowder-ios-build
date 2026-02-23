@@ -13,12 +13,19 @@ jobs:
       - name: Setup Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
-      - name: Fix Syntax
-        run: sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
+      # I commented this out. Let's see if your raw code compiles without this regex hack.
+      # - name: Fix Syntax
+      #   run: sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
 
-      - name: Build Everything
+      - name: Build Everything (Debug Mode)
         run: |
-          # Use standard build, Release configuration, and disable code signing so it doesn't fail on missing certs
+          # Install xcbeautify to make the logs actually readable
+          brew install xcbeautify
+          
+          # This ensures the GitHub Action fails if xcodebuild fails, even when piped
+          set -o pipefail
+          
+          # Run the build and pipe it into xcbeautify
           xcodebuild clean build \
             -project Chowder/Chowder.xcodeproj \
             -scheme Chowder \
@@ -27,20 +34,20 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            IPHONEOS_DEPLOYMENT_TARGET=17.0
+            IPHONEOS_DEPLOYMENT_TARGET=17.0 | xcbeautify
 
       - name: Package COMPLETE App
+        # This will only run if the build step above succeeds
         run: |
           mkdir -p Payload
           
-          # Copy the actual built app directly from Xcode's predictable output path
-          # If Xcode built extensions, they are already inside PlugIns/ inside this .app bundle
+          # Copy the built app directly
           cp -R build/Build/Products/Release-iphoneos/Chowder.app Payload/
           
-          # Zip it up into an IPA
+          # Zip it up
           zip -r Chowder-FULL.ipa Payload
           
-          # Verify sizes
+          # Check sizes
           ls -lh Chowder-FULL.ipa
           du -sh Payload/Chowder.app
 
