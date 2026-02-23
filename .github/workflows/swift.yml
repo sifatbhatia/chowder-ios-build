@@ -14,52 +14,33 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
       - name: Fix Syntax
-        run: sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift || true
+        run: sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
 
       - name: Build Everything
         run: |
-          mkdir -p build
-          xcodebuild build-for-testing \
+          # Use standard build, Release configuration, and disable code signing so it doesn't fail on missing certs
+          xcodebuild clean build \
             -project Chowder/Chowder.xcodeproj \
             -scheme Chowder \
+            -configuration Release \
             -destination "generic/platform=iOS" \
             -derivedDataPath build \
-            IPHONEOS_DEPLOYMENT_TARGET=17.0 || true
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=17.0
 
       - name: Package COMPLETE App
         run: |
-          # Copy ALL built products (main + extensions)
-          mkdir -p Payload/Chowder.app
+          mkdir -p Payload
           
-          # Main app
-          find build -path "*/Debug-iphoneos/Chowder.app" -prune | while read dir; do 
-            cp -r "$dir/." Payload/Chowder.app/ || true
-          done
+          # Copy the actual built app directly from Xcode's predictable output path
+          # If Xcode built extensions, they are already inside PlugIns/ inside this .app bundle
+          cp -R build/Build/Products/Release-iphoneos/Chowder.app Payload/
           
-          # Extensions/Assets
-          find build -name "*.app" -type d | grep -v Chowder.app | while read ext; do
-            mkdir -p "Payload/Chowder.app/PlugIns/$(basename "$ext")"
-            cp -r "$ext/." "Payload/Chowder.app/PlugIns/$(basename "$ext")" || true
-          done
-          
-          # Info.plist
-          cat > Payload/Chowder.app/Info.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleIdentifier</key><string>com.sifatbhatia.chowder</string>
-            <key>CFBundleDisplayName</key><string>Chowder</string>
-            <key>CFBundleExecutable</key><string>Chowder</string>
-            <key>CFBundleShortVersionString</key><string>1.0</string>
-            <key>CFBundleVersion</key><string>1</string>
-            <key>CFBundlePackageType</key><string>APPL</string>
-            <key>LSRequiresIPhoneOS</key><true/>
-          </dict>
-          </plist>
-          EOF
-
+          # Zip it up into an IPA
           zip -r Chowder-FULL.ipa Payload
+          
+          # Verify sizes
           ls -lh Chowder-FULL.ipa
           du -sh Payload/Chowder.app
 
