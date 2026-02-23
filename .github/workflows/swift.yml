@@ -11,27 +11,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build App for IPA
-      run: |
-        xcodebuild build -project Chowder/Chowder.xcodeproj \
-                   -scheme Chowder \
-                   -configuration Release \
-                   -destination "generic/platform=iOS" \
-                   -derivedDataPath build \
-                   CODE_SIGNING_ALLOWED=NO \
-                   CODE_SIGNING_REQUIRED=NO \
-                   CODE_SIGN_IDENTITY="" \
-                   CODE_SIGN_ENTITLEMENTS=""
+      - name: Build Unsigned Archive
+        run: |
+          mkdir -p build
+          xcodebuild archive \
+            -project Chowder/Chowder.xcodeproj \
+            -scheme Chowder \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/Chowder.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS=""
 
       - name: Package IPA
         run: |
           mkdir -p Payload
-          # Moves the compiled .app into a Payload folder for zipping
-          cp -r build/Build/Products/Release-iphoneos/*.app Payload/
+          cp -r build/Chowder.xcarchive/Products/Applications/*.app Payload/
           zip -r Chowder.ipa Payload
 
-      - name: Upload to GitHub
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Chowder-Package
           path: Chowder.ipa
+          retention-days: 30
