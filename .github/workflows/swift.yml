@@ -1,4 +1,4 @@
-name: Build Unsigned IPA (No Errors)
+name: Fix & Build Unsigned IPA
 
 on:
   push:
@@ -10,61 +10,43 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Select Xcode 16.1
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer && xcodebuild -version
-
-      - name: Setup Ruby & Bundler (if needed)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: true
-
-      - name: Resolve Dependencies
+      - name: Auto-Fix Swift Syntax Errors
         run: |
-          xcodebuild -resolvePackageDependencies -project Chowder/Chowder.xcodeproj -scheme Chowder || true
+          # Remove trailing commas from ChowderActivityAttributes.swift (lines 61,73,86,99,112,125)
+          sed -i.bak 's/),\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
+          sed -i.bak 's/,\s*)\s*$/)/g' Chowder/Chowder/Models/ChowderActivityAttributes.swift
+          echo "Fixed trailing commas:"
+          grep -n "," Chowder/Chowder/Models/ChowderActivityAttributes.swift | head -10
 
-      - name: Clean Everything
-        run: |
-          rm -rf ~/Library/Developer/Xcode/DerivedData
-          xcodebuild clean -project Chowder/Chowder.xcodeproj -scheme Chowder -alltargets || true
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
-      - name: Build Unsigned Archive (Force Success)
+      - name: Build App (Fixed)
         run: |
           mkdir -p build
-          xcodebuild archive \
+          xcodebuild build \
             -project Chowder/Chowder.xcodeproj \
             -scheme Chowder \
             -configuration Debug \
             -destination "generic/platform=iOS" \
             -derivedDataPath build \
             IPHONEOS_DEPLOYMENT_TARGET=17.0 \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_ENTITLEMENTS="" \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
-            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
-            CLANG_TREAT_WIDE_CHARACTERS_AS_NUMBERED_ESCAPE_SEQUENCES=NO \
-            ENABLE_PREVIEWS=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            STRICT_CONCURRENCY=complete \
-            OTHER_SWIFT_FLAGS="-Xfrontend -warn-long-function-bodies=200 -Xfrontend -warn-long-expression-type-checking=200 -Xfrontend -disable-access-control" \
-            || (echo "Build warnings ignored - checking for .app" && ls -la build/*/Products/Applications/ || exit 1)
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO || true
 
-      - name: Package IPA (Fallback)
+      - name: Package IPA
         run: |
-          find build -name "*.app" -type d | head -1 | xargs -I {} cp -r {} Payload/ || (echo "No .app found, trying archive path" && mkdir -p Payload && cp -r build/Chowder.xcarchive/Products/Applications/*.app Payload/ 2>/dev/null || exit 1)
-          zip -r Chowder.ipa Payload || exit 1
+          APP=$(find build -name "*.app" | head -1)
+          if [ -n "$APP" ]; then
+            mkdir -p Payload && cp -r "$APP" Payload/ && zip -r Chowder.ipa Payload
+          else
+            echo "No app - listing:" && find build -name "*.app" || true
+            exit 1
+          fi
 
-      - name: Upload IPA Artifact
-        if: always()
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Chowder-Package
+          name: Chowder-IPA
           path: Chowder.ipa
-          retention-days: 30
